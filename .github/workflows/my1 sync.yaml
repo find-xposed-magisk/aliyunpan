@@ -62,7 +62,7 @@ jobs:
         git commit -m "bot actions"
         git push -u -f origin ${{ env.MY_BRANCH }}
 
-    - name :
+    - name : 占位
       run: |
         echo "占位"
 
@@ -92,6 +92,7 @@ jobs:
           echo "skip=true" >> $GITHUB_ENV
         else
           echo "步骤2：在上游仓库中找到了发布版本。"
+          echo "skip=false" >> $GITHUB_ENV
           tag_name=$(echo $response | jq -r .tag_name)
           echo "tag_name=$tag_name" >> $GITHUB_ENV
           echo "tag_name is: $tag_name"
@@ -106,10 +107,10 @@ jobs:
           echo "assets_count is: $assets_count"
           if [[ "$assets_count" != '0' ]]; then
             echo "步骤3：在上游仓库的发布版本中未找到资源。跳过创建新发布。"
-            echo "skip=true" >> $GITHUB_ENV
+            echo "'skip=true' >> $GITHUB_ENV"
           else
             echo "步骤4：在上游仓库的发布版本中找到了资源。"
-            echo "skip=false" >> $GITHUB_ENV
+            echo "'skip=false' >> $GITHUB_ENV"
           fi
         fi
   
@@ -153,7 +154,7 @@ jobs:
         draft: false
         prerelease: false
 
-    - name: Download and Upload Release Assets
+    - name: download-update
       if: ${{ env.skip == 'false' }}
       run: |
         echo "步骤9：开始下载和上传发布资源。"
@@ -171,7 +172,8 @@ jobs:
 
     - name: Check if download Failed
       run: |
-        if [[ "${{ steps.Push.outcome }}" == "failure" ]]; then
+        if [[ "${{ steps.download-update.outcome }}" == "failure" ]]; then
           echo "抱歉失败退出了"
           exit 1
         fi
+
