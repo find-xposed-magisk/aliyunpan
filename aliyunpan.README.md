@@ -4,14 +4,19 @@
 # 特色
 1. 多平台支持, 支持 Windows, macOS, linux(x86/x64/arm), android, iOS 等
 2. 阿里云盘多用户支持
-3. 支持同步盘，资源库，相册网盘无缝切换
+3. 支持备份盘，资源库无缝切换
 4. [下载](docs/manual.md#下载文件目录)网盘内文件, 支持多个文件或目录下载, 支持断点续传和单文件并行下载。支持软链接(符号链接)文件。
 5. [上传](docs/manual.md#上传文件目录)本地文件, 支持多个文件或目录上传，支持排除指定文件夹/文件（正则表达式）功能。支持软链接(符号链接)文件。
 6. [同步备份功能](docs/manual.md#同步备份功能)支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份保持本地文件和网盘文件同步。常用于嵌入式或者NAS等设备，支持docker镜像部署。
 7. 命令和文件路径输入支持Tab键自动补全，路径支持通配符匹配模式
-8. 支持阿里云ECS环境下使用内网链接上传/下载，速度更快(只支持阿里经典网络，最高可达100MB/s)，还可以节省公网带宽流量(配置transfer_url_type=2即可)
-9. 支持[JavaScript插件](docs/manual.md#JavaScript插件)，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求
-10. 支持个人相册的相关操作，支持批量下载相册所有照片、视频文件到本地
+8. 支持[JavaScript插件](docs/plugin_manual.md#简介)，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求
+9. 支持共享相册的相关操作，支持批量下载相册所有普通照片、实况照片文件到本地
+10. 支持多用户联合下载功能，对下载速度有极致追求的用户可以尝试使用该选项。详情请查看文档[多用户联合下载](docs/manual.md#多用户联合下载)
+
+# 阿里云盘VIP会员推荐码
+如果大家有打算开通阿里云盘VIP会员，可以使用阿里云盘APP扫描下面的优惠推荐码进行开通。    
+注意：您需要开通【三方应用权益包】，这样使用本程序下载才能加速，否则下载无法提速。   
+![](./assets/images/aliyunpan_cps_qrcode.png)
 
 # 目录
 - [关于](#关于)
@@ -38,7 +43,6 @@
     - [同步备份文件](#同步备份文件)
   - [更多命令](#更多命令)
 - [常见问题](#常见问题)
-  - [如何获取RefreshToken](#如何获取refreshtoken)
   - [如何开启Debug调试日志](#如何开启debug调试日志)
     - [第一步](#第一步)
     - [第二步](#第二步)
@@ -55,15 +59,16 @@
 2. arm64 : 适用64位ARM系统
 3. 386 / x86 : 适用32系统，包括Intel和AMD的CPU系统
 4. amd64 / x64 : 适用64位系统，包括Intel和AMD的CPU系统
-5. mips : 适用MIPS指令集的CPU，例如国产龙芯CPU
-6. macOS amd64适用Intel CPU的机器，macOS arm64目前主要是适用苹果M1芯片的机器
+5. mips : 适用MIPS指令集的CPU，例如中标麒麟的系统。MIPS要注意大小端字序的不同对应的版本也不同。
+6. macOS amd64适用Intel CPU的机器，macOS arm64目前主要是适用苹果M系列芯片的机器
 7. iOS arm64适用iPhone手机，并且必须是越狱的手机才能正常运行
+8. loong64 : 适用于LoongArch64架构的机器，例如国产龙芯CPU
 
 参考例子：
 ```shell
-wget https://github.com/tickstep/aliyunpan/releases/download/v0.2.8/aliyunpan-v0.2.8-linux-amd64.zip
-unzip aliyunpan-v0.2.8-linux-amd64.zip
-cd aliyunpan-v0.2.8-linux-amd64
+wget https://github.com/tickstep/aliyunpan/releases/download/v0.3.7/aliyunpan-v0.3.7-linux-amd64.zip
+unzip aliyunpan-v0.3.7-linux-amd64.zip
+cd aliyunpan-v0.3.7-linux-amd64
 ./aliyunpan
 ```
 
@@ -108,21 +113,30 @@ winget install tickstep.aliyunpan --silent
 
 ## docker安装
 ### sync同步盘
-同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
-备份功能支持以下三种模式：
+同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地两种模式。支持JavaScript插件对备份文件进行过滤。
+备份功能支持以下模式：
 1. 备份本地文件，即上传本地文件到网盘，始终保持本地文件有一个完整的备份在网盘
 2. 备份云盘文件，即下载网盘文件到本地，始终保持网盘的文件有一个完整的备份在本地
-3. 双向备份，保持网盘文件和本地文件严格一致
+   
+备份功能支持指定备份策略：
+1. exclusive，排他备份文件（一比一镜像备份），目标目录多余的文件会被删除。保证备份的源目录，和目标目录文件一比一备份。源目录文件如果文件被删除，则对应的目标目录的文件也会被删除。
+2. increment，增量备份文件，目标目录多余的文件不会被删除。只会把源目录修改的文件，新增的文件备份到目标目录。如果源目录有文件删除，或者目标目录有其他文件新增是不会被删除。
+   
+同步的基本逻辑如下所示，一次循环包括：扫描-对比-执行，一共三个环节。   
+![](./assets/images/sync_command-basic_logic.jpg)
+
 ```
-docker run -d --name=aliyunpan-sync --restart=always -v "<your local dir>:/home/app/data" -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_TASK_STEP="sync" tickstep/aliyunpan-sync:v0.2.8
- 
+docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_POLICY="increment" -e ALIYUNPAN_SYNC_DRIVE="backup" -e ALIYUNPAN_SYNC_LOG="true" tickstep/aliyunpan-sync:v0.3.7 
   
-<your local dir>：本地目录绝对路径，例如：/tickstep/Documents/设计文档
-ALIYUNPAN_PAN_DIR：云盘目录
-ALIYUNPAN_REFRESH_TOKEN：RefreshToken
-ALIYUNPAN_SYNC_MODE：备份模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
-ALIYUNPAN_TASK_STEP：任务步骤, 支持两种: scan(只扫描并建立同步数据库),sync(正常启动同步任务)。如果你同步目录文件非常多，首次运行最好先跑一次scan步骤，然后再正常启动文件同步任务
+<your aliyunpan_config.json>: 用户已经登录成功并保存好的aliyunpan_config.json凭据文件
+<your local dir>：本地目标目录，绝对路径，例如：/tickstep/Documents/设计文档
+ALIYUNPAN_PAN_DIR：云盘目标目录，绝对路径
+ALIYUNPAN_SYNC_MODE：备份模式，支持: upload(备份本地文件到云盘),download(备份云盘文件到本地)
+ALIYUNPAN_SYNC_POLICY：备份策略，支持：exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)
+ALIYUNPAN_SYNC_DRIVE: 网盘，支持：backup(备份盘), resource(资源盘)
+ALIYUNPAN_SYNC_LOG: 同步日志，true-开启同步日志显示，false-关闭同步日志
 ```
+docker-compose启动方式请查看：[docker-compose.yml](https://github.com/tickstep/aliyunpan/blob/main/docs/manual.md#Docker%E8%BF%90%E8%A1%8C)   
 更详情文档请参考dockerhub网址：[tickstep/aliyunpan-sync](https://hub.docker.com/r/tickstep/aliyunpan-sync)
 
 # 如何使用
@@ -186,11 +200,12 @@ aliyunpan > help
 ```
 
 ### 登录
-需要先登录，已经登录过的可以跳过此步。   
-RefreshToken获取教程请查看：[如何获取RefreshToken](#如何获取RefreshToken)
+需要先登录，已经登录过的可以跳过此步。登录是在浏览器上进行，你需要进行两次登录。
 ```shell
-aliyunpan > login -RefreshToken=32994cd2c43...4d505fa79
-
+aliyunpan > login
+请在浏览器打开以下链接进行登录，链接有效时间为5分钟。
+注意：你需要进行一次授权一次扫码的两次登录。
+https://openapi.alipan.com/oauth/authorize?client_id=cf9f70e8fc61430f8ec5ab5cadf31375&redirect_uri=https%3A%2F%2Fapi.tickstep.com%2Fauth%2Ftickstep%2Faliyunpan%2Ftoken%2Fopenapi%2F8206f0.....fb5db6b40336%2Fauth&scope=user:base,file:all:read,file:all:write
 阿里云盘登录成功:  tickstep
 aliyunpan:/ tickstep$ 
 ```
@@ -202,7 +217,6 @@ aliyunpan:/ tickstep(备份盘)$ drive
   #   DRIVE ID   网盘名称  
   1    11519221   备份盘   
   2  1311893110   资源库   
-  3    61104421    相册
   
 输入要切换的网盘 # 值 > 2
 切换到网盘：资源库                     
@@ -227,6 +241,7 @@ aliyunpan:/ tickstep$ ls
 ```
 
 ### 下载文件
+通过 `aliyunpan config set -savedir <savedir>` 可以自定义下载文件保存的目录。
 ```shell
 aliyunpan:/ tickstep$ download IMG_0106.JPG
 
@@ -248,10 +263,6 @@ aliyunpan:/ tickstep$ download IMG_0106.JPG
 下载结束, 时间: 4秒, 数据总量: 1.48MB
 aliyunpan:/ tickstep$ 
 ```
-下载支持两种链接类型：1-默认类型 2-阿里ECS环境类型   
-在普通网络下，下载速度可以达到10MB/s，在阿里ECS（必须是"经典网络"类型的机器）环境下，下载速度单文件可以轻松达到20MB/s，多文件可以达到100MB/s   
-![](./assets/images/download_file_ecs_speed_screenshot.gif)
-![](./assets/images/download_file_speed_screenshot.gif)
 
 ### 上传文件
 ```shell
@@ -270,23 +281,13 @@ aliyunpan:/ tickstep$ upload /Users/tickstep/Downloads/apt.zip /tmp
 
 上传结束, 时间: 18秒, 数据总量: 21.00MB
 ```
-上传支持两种链接类型：1-默认类型 2-阿里ECS环境类型   
-在阿里ECS（必须是"经典网络"类型的机器）环境下，上传速度单文件可以轻松达到30MB/s，多文件可以达到100MB/s   
-![](./assets/images/upload_file_speed_screenshot.gif)
 
 ### 同步备份文件
-同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
-
-***注意：如果同步目录下有非常多的文件，最好在首次备份前先运行一次scan任务，等scan任务完成并建立起同步数据库后，再正常启动同步任务。这样同步任务可以更加快速同步并且能有效避免同步重复文件。***
-
-
+同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。   
+   
 例如：将本地目录 `/tickstep/Documents/设计文档` 中的文件备份上传到云盘目录 `/备份盘/我的文档`
 ```shell
-首次运行建议先扫描并构建同步数据库，如下：
-aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload" -step scan
-
-然后再正常启动同步任务，如下：
-aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload"
+aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload" -drive "backup"
 
 启动同步备份进程
 备份配置文件：(使用命令行配置)
@@ -307,18 +308,6 @@ aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir 
 更多更详细的命令请查看手册：[命令手册](docs/manual.md)。
 
 # 常见问题
-## 如何获取RefreshToken
-需要通过浏览器获取refresh_token。这里以Chrome浏览器为例，其他浏览器类似。   
-打开 [阿里云盘网页](https://www.aliyundrive.com/drive) 并进行登录，然后F12按键打开浏览器调试菜单，按照下面步骤进行
-![](./assets/images/how-to-get-refresh-token.png)
-
-或者直接在控制台输入以下命令获取
-```
-JSON.parse(localStorage.getItem("token")).refresh_token
-```
-![](./assets/images/how-to-get-refresh-token-cmd.png)
-
-
 ## 如何开启Debug调试日志
 当需要定位问题，或者提交issue的时候抓取log，则需要开启debug日志。步骤如下：
 
@@ -331,17 +320,18 @@ export ALIYUNPAN_VERBOSE=1
 
 Windows   
 不同版本会有些许不一样，请自行查询具体方法   
-设置示意图如下：
+设置示意图如下：   
 ![](./assets/images/win10-env-debug-config.png)
 
 ### 第二步
-打开aliyunpan命令行程序，任何云盘命令都有类似如下日志输出
+打开aliyunpan命令行程序，任何云盘命令都有类似如下日志输出   
 ![](./assets/images/debug-log-screenshot.png)
 
 ## 如何登出和下线客户端
 阿里云盘单账户最多只允许同时登录 10 台设备   
 当出现这个提示：你账号已超出最大登录设备数量，请先下线一台设备，然后重启本应用，才可以继续使用   
 说明你的账号登录客户端已经超过数量，你需要先登出其他客户端才能继续使用，如下所示   
+   
 APP手机端   
 ![](./assets/images/app-deregister-device.png)
 Web网页端   
@@ -353,6 +343,6 @@ Web网页端
 
 # 鸣谢
 本项目大量借鉴了以下相关项目的功能&成果   
-> [tickstep/cloudpan189-go](https://github.com/tickstep/cloudpan189-go)    
-> [hacdias/webdav](https://github.com/hacdias/webdav)   
+> [tickstep/aliyunpan-api](https://github.com/tickstep/aliyunpan-api)   
+> [tickstep/cloudpan189-go](https://github.com/tickstep/cloudpan189-go)   
 > [kazutoiris/ali_ecc](https://github.com/kazutoiris/ali_ecc)   
