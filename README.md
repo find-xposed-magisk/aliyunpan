@@ -107,7 +107,7 @@ winget source update
 ```
 安装
 ```powershell
-winget install tickstep.aliyunpan --silent
+winget install tickstep.aliyunpan --source winget --silent
  
 ```
 
@@ -241,7 +241,7 @@ aliyunpan:/ tickstep$ ls
 ```
 
 ### 下载文件
-通过 `aliyunpan config set -savedir <savedir>` 可以自定义下载文件保存的目录。
+如果需要更改默认下载目录路径，可以通过 `aliyunpan config set -savedir <savedir>` 自定义下载文件保存的目录。
 ```shell
 aliyunpan:/ tickstep$ download IMG_0106.JPG
 
@@ -320,7 +320,7 @@ aliyunpan:/ tickstep$ upload /Users/tickstep/Downloads /photo -ui
 ```
 
 ### 同步备份文件
-同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。   
+同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地两种模式。支持JavaScript插件对备份文件进行过滤。   
    
 例如：将本地目录 `/tickstep/Documents/设计文档` 中的文件备份上传到云盘目录 `/备份盘/我的文档`
 ```shell
